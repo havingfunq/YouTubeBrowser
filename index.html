@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	    <meta charset="UTF-8">
+		<title>The Blob YouTube Browser</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+
+            #playerContainer {
+                top:100%;
+                overflow:hidden;
+                
+                background-color: #171717;
+			    color: rgb(255,255,255);
+			    
+			    width: 100%;
+			    height: 100%;
+			    
+			    left: -100%;
+            }
+
+            #container {
+			    position:absolute;
+			    bottom: 0px;   
+            }
+
+			#zoomInButton {
+
+			    background-color: #171717;
+			    color: rgb(255,255,255);
+
+			}
+
+			#zoomOutButton {
+
+			    background-color: #171717;
+			    color: rgb(255,255,255);
+
+			}
+			#playButton {
+
+			    background-color: #171717;
+			    color: rgb(255,255,255);
+			}
+			#leftButton {
+
+			    background-color: #171717;
+			    color: rgb(255,255,255);
+			}
+			#rightButton {
+
+			    background-color: #171717;
+			    color: rgb(255,255,255);
+			}
+			#upButton {
+			    background-color: #171717;
+			    color: rgb(255,255,255);
+			}
+			#downButton {
+			    background-color: #171717;
+			    color: rgb(255,255,255);
+			}
+			
+			body {
+                padding: 0px;    
+            }
+            
+            #container {
+                position: absolute;
+                margin: 0px;
+                padding: 0px;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;  
+            }
+            
+            .box {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                /*line-height: 300px;*/
+                font-size: 50px;
+                /*text-align: center;*/
+                /*border: 2px solid black;*/
+                left: 0%;
+                top: 0px;
+                margin-left: -100%;
+            }
+            
+            #box1 {
+                background-color: #171717;
+            			    color: rgb(255,255,255);
+            }
+            
+            #buttonHide {
+                
+            }
+            
+            #intro {
+                position: fixed; 
+                width: 20%; /* Set your desired with */
+                z-index: 1; /* Make sure its above other items. */
+                top: 50%;
+                left: 50%;
+                margin-top: -10%; /* Changes with height. */
+                margin-left: -10%; /* Your width divided by 2. */
+             
+                /* You will not need the below, its only
+                   for styling   purposes.*/
+                padding: 10px;
+                border: 2px solid #555555;
+                background-color: #ccc;
+                border-radius: 5px;
+                text-align: center;
+
+            }
+            
+            input[type=text] {
+                padding: 0;
+                height: 30px;
+                position: relative;
+                left: 0;
+                outline: none;
+                border: 1px solid #cdcdcd;
+                border-color: rgba(0,0,0,.15);
+                background-color: white;
+                font-size: 16px;
+                width: 10em;
+            }
+            
+            .searchTextbox {
+                width: 18%;
+                margin-right: -4px;
+            }
+			
+		</style>
+	</head>
+	<body>
+	    <script src="js/three.min.js"></script>
+	    <script src="js/three.js-master/examples/js/renderers/Projector.js"></script>
+		<script src="js/three.js-master/examples/js/renderers/CanvasRenderer.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+		<script>
+		var mouse = new THREE.Vector2();
+		var state = 2;
+		mouse.x = -10000;
+		mouse.y = -10000;
+		var curr_key = '';
+		var raycaster = new THREE.Raycaster();
+		var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        var pause = false;
+		var renderer = new THREE.CanvasRenderer();
+		var group = [];
+		
+		$( document ).ready(function() {    
+            load_button_callbacks();
+            position_player_div();
+		     
+		    var queue = [];
+		    var history = [];
+            var enableClick = true;
+            var i = 0;
+            
+            var projector = new THREE.Projector();
+
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            document.body.appendChild( renderer.domElement );
+
+            camera.position.z = 5;
+            
+            function render() {
+                switch(state) {
+        	        case 1:
+        	            var deleteList = [];
+        	            
+        	            scene.traverse( function( node ) {
+                            if ( node instanceof THREE.Mesh ) {
+                                node.position.y -= .01; 
+                            
+                                //console.log(node.position.y);
+                                if(node.position.y < -4){
+                                    deleteList.push(scene.getObjectByName(node.name));
+                                }
+                            }
+                        
+                        } );
+                        
+                        for(var j = 0; j < deleteList.length; j++){
+                            scene.remove(deleteList[j]);
+                        }
+                    
+                        if(i++ > 400){
+                            yt_get(queue.shift());
+                            
+                            i = 0;
+                        }
+                    
+                        break;
+                        
+                    case 2: // waiting for input
+                    
+                        break;
+                    case 5:
+                        
+                        //foreach in que, translate
+        	            scene.traverse( function( node ) {
+
+                            if ( node instanceof THREE.Mesh ) {
+                                
+                                node.position.z += .01; 
+                            }
+                        
+                        } );
+                    
+                        break;
+                }
+                
+                if(!pause){
+                    requestAnimationFrame( render );
+                    renderer.render( scene, camera );
+    	            
+                }
+            }
+            render();
+
+            function yt_get(yt_key){
+                console.log(yt_key);
+                
+                $.ajax({
+                    url: "yt.php?videoKey="+yt_key,
+                    async: true,
+                    success: function(response){
+                        obj = JSON.parse(response);
+                        
+                        var length = hashCount(obj);
+
+                        var j = 0;
+
+                        for (var key in obj){
+                            if(key == " "){
+                             continue;
+                            }
+                             
+                            var geometry = new THREE.PlaneGeometry( 1, 1, 1 );
+                            var material = new THREE.MeshLambertMaterial({
+                                map: THREE.ImageUtils.loadTexture('https://i.ytimg.com/vi/' + key +  '/hqdefault.jpg')
+                            });
+                            
+                            var plane = new THREE.Mesh( geometry, material );
+                             
+                            plane.name = key;
+                            plane.newest = true;
+                            
+                            plane.parnt = yt_key;
+                
+                            plane.position.x = ((Math.random() *2 )-1)*8;
+                            plane.position.y = ((Math.random() *2 )-1)*2;
+                            plane.position.z = 0; //-5;
+                    
+                            scene.add( plane );
+                            
+                            j++;
+                            queue.push(key);
+                        }
+                        
+                        state = 1;
+                    }
+                });
+            }
+            
+            function hashCount(obj){
+                var count = 0;
+                
+                for(keys in obj){
+                    count++;
+                }
+                
+                return count;
+            }
+            
+            function display_intro() {
+                
+            }
+            
+            function position_player_div() {
+                $("#playerContainer").parent().css({position: 'relative'});
+                $("#playerContainer").css({top: 0, left: 200, position:'absolute'});
+            }
+            function load_button_callbacks(){
+                
+                $('#buttonHide').click(function() {
+                    pause = false;
+                    
+                    $('#box1').animate({
+                        left: '200%'
+                    }, 1000, function() {
+                        //$(this).css('left', '100%');
+                        //$(this).appendTo('#container');
+                    });
+                    
+                    requestAnimationFrame( render );
+                });
+                
+                $('#submit').click(function(){
+                    var url = $('#searchTextbox').val();
+                    var videoKey = '';
+                     
+                    var parameters = (url.split("/"))[3].split("?")[1].split("&");
+                    
+                    for(var j = 0; j < parameters.length; j++){
+                        var args = parameters[j].split("=");
+                        
+                        if(args[0] == "v"){
+                            videoKey = args[1];
+                            break;
+                        }
+                    }
+                     
+                    if(videoKey != ''){
+                        $('#intro').hide();
+                    }
+                     
+                    var geometry = new THREE.PlaneGeometry( 1, 1, 1 );
+            
+                    var material = new THREE.MeshLambertMaterial({
+                        map: THREE.ImageUtils.loadTexture('https://i.ytimg.com/vi/" +  videoKey + "/default.jpg')
+                      });
+        
+                    var plane = new THREE.Mesh( geometry, material );
+                    plane.name = videoKey;
+                    scene.add( plane );
+                    
+                    yt_get(videoKey);
+                    
+                    state = 1;
+                });
+            }
+		});
+		
+        $(document).click(function (e) { 
+            
+            if(state == 2){
+                return;
+            } 
+            
+            mouse.x = ( e.pageX / window.innerWidth ) * 2 - 1;
+ 	        mouse.y = - ( e.pageY / window.innerHeight ) * 2 + 1;
+            var vector = new THREE.Vector3(  mouse.x,  mouse.y,   0.1 );
+                        
+            raycaster.setFromCamera( mouse, camera );
+                        
+            var intersects = raycaster.intersectObjects( scene.children );
+        
+            if(intersects[0].object.name != null){        
+                pause = true;
+                //reset youtube embed, before scrolling it onto screen
+                        
+                $( "#ytplayer" ).remove();
+                    
+                $('<iframe />');  // Create an iframe element
+                $('<iframe />', {
+                    id: 'ytplayer',
+                    type: 'text/html',
+                    src: "https://www.youtube.com/embed/" + intersects[ 0 ].object.name + "?autoplay=0&origin=https://ytphp-colonel.c9.io/",
+                    autoplay: "0",
+                    frameborder: "0",
+                    height:"80%",
+                    width: "100%"
+                }).appendTo('#box1');
+                    
+                $('#box1').animate({
+                    right: '100%'
+                }, 1000, function() {
+                    $(this).css('left', '100%');
+                });
+            }
+        });
+        </script>
+        <div id="box1" class="box">
+            <div id="buttonHide">
+                Hide
+            </div>
+            <iframe id="ytplayer" type="text/html" src="https://www.youtube.com/embed/4BjGWLJNPcA?autoplay=0&origin=https://ytphp-colonel.c9.io/" autoplay="0" frameborder="0" height="80%" width="100%"></iframe>
+        </div>
+        <div id="intro">
+            Enter YouTube URL: <br>
+            <input type="text" class="searchTextbox" name="fname" id="searchTextbox"><input type="button" id="submit" Value="Deep View YouTube">
+        </div>
+	</body>
+</html>
