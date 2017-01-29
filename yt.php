@@ -7,6 +7,8 @@
 
         $ret = array();
         $videoKey = $_GET["videoKey"];
+        $videoKey = substr($videoKey,0,11);
+        
         $nextPageToken = $_GET["nextPageToken"];
         $dataHandle = '';
         $data = '';
@@ -15,7 +17,7 @@
             trigger_error("Video Key Needed", E_USER_ERROR);
         }
         
-        $dataHandle = file("https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId=$videoKey&type=video&key=AIzaSyA_bUj9IZcjriL_PKA-1pZQy374FoICvNc&maxResults=25");
+        $dataHandle = file("https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId=$videoKey&type=video&key=#Insert YouTube API key here#&maxResults=25");
         
         foreach($dataHandle as $line) {
             $data = $data . "$line";
@@ -24,13 +26,8 @@
         $obj = json_decode($data);
         $lengthOfResults = $obj->{"pageInfo"}->{"resultsPerPage"};
         
-        $title1 = get_title("$videoKey");
-        
-        $response = "\"$videoKey\"" . ":" . "\"$title1\"".",";
-        
         for($i = 0; $i < $lengthOfResults; $i++) {
             $key = $obj->{"items"}[$i]->{"id"}->{"videoId"}; #->{1}->{"id"}->{"videoId"} . "\n";
-            
             
             $title = get_title($key);
 
@@ -44,7 +41,7 @@
         echo '{'.$response.'}';
         
         function get_title($key){
-            $dataHandle = file("https://www.googleapis.com/youtube/v3/videos?id=$key&key=AIzaSyA_bUj9IZcjriL_PKA-1pZQy374FoICvNc&max&fields=items(snippet(title))&part=snippet");
+            $dataHandle = file("https://www.googleapis.com/youtube/v3/videos?id=$key&key=AIzaSyDjs8UVVf9xvl5hPDBcolcZn9IcLbgOHbw&max&fields=items(snippet(title))&part=snippet");
 
             foreach($dataHandle as $line) {
                 $data = $data . "$line";
