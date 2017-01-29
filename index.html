@@ -133,14 +133,33 @@
                 width: 18%;
                 margin-right: -4px;
             }
+
+            #fromBottom {
+                position: absolute;
+                bottom: 50px;
+                width: 33%;
+                  left: 0; 
+  right: 0; 
+  margin-left: auto; 
+  margin-right: auto; 
+}
+            }
+            
+            #slider{
+                margin: auto;
+                display: block;           
+            }
 			
 		</style>
+		<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/themes/base/jquery-ui.css" type="text/css" media="all" />
+
 	</head>
 	<body>
-	    <script src="js/three.min.js"></script>
+	    <script src="js/three.js-master/build/three.min.js"></script>
 	    <script src="js/three.js-master/examples/js/renderers/Projector.js"></script>
 		<script src="js/three.js-master/examples/js/renderers/CanvasRenderer.js"></script>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+		<script src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js"></script>
 
 		<script>
 		var mouse = new THREE.Vector2();
@@ -150,21 +169,27 @@
 		var curr_key = '';
 		var raycaster = new THREE.Raycaster();
 		var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        var camera = new THREE.PerspectiveCamera( 85, window.innerWidth / window.innerHeight, 0.1, 1000 );
         var pause = false;
 		var renderer = new THREE.CanvasRenderer();
 		var group = [];
+		var dropCount = 0;
+		var scrollValue = 1;
+		var speedZ = .01*scrollValue;
 		
 		$( document ).ready(function() {    
             load_button_callbacks();
             position_player_div();
-		     
+            load_slider();
+            
+            $( "#intro" ).hide(0).delay(500).fadeIn(1000)
+            
 		    var queue = [];
 		    var history = [];
             var enableClick = true;
             var i = 0;
             
-            var projector = new THREE.Projector();
+            //var projector = new THREE.Projector();
 
             renderer.setSize( window.innerWidth, window.innerHeight );
             document.body.appendChild( renderer.domElement );
@@ -174,48 +199,164 @@
             function render() {
                 switch(state) {
         	        case 1:
-        	            var deleteList = [];
-        	            
+                    
+                    
+                        /////////////////////////// Translate new videos to front //////////////////////////
+                        
+                        var newestCount = 0;
+                        
+                        var deleteList = [];  // checked
+                        
+                        
+                        //foreach in que, translate
         	            scene.traverse( function( node ) {
-                            if ( node instanceof THREE.Mesh ) {
-                                node.position.y -= .01; 
-                            
-                                //console.log(node.position.y);
-                                if(node.position.y < -4){
-                                    deleteList.push(scene.getObjectByName(node.name));
+
+                            if ( node instanceof THREE.Mesh  ) {
+                                
+                                if(node.newest){
+                                    
+                                    node.position.z += speedZ;
+                                    
+                                    if(node.position.z > 3 && node.material.opacity >= 0.05 ){
+                                        node.material.opacity = node.material.opacity - .05; //node.materials[0].opacity - 0;
+                                        
+                                        node.opacity = node.opacity - .05;
+                                  
+                                    }
+                                    
+                                }
+                                
+                                newestCount++;
+                                
+                                if(node.position.z > 10){
+                                    //recycle
+                                    deleteList.push(node.name);
+                                    // console.log("Added: " + node.name);
                                 }
                             }
                         
                         } );
                         
+                        
                         for(var j = 0; j < deleteList.length; j++){
-                            scene.remove(deleteList[j]);
+                            var meshToBeRemoved = scene.getObjectByName(deleteList[j]);
+                            
+                            
+                            // delete.getObjectByName();
+                            
+                            //console.log(Object.getOwnPropertyNames(meshToBeRemoved));
+                            
+                            // console.log("Type to be removed: " + meshToBeRemoved.type);
+                            
+                            
+                            
+                            meshToBeRemoved.geometry.dispose(); // new
+                            meshToBeRemoved.material.map.dispose();
+                            meshToBeRemoved.material.dispose();
+                            
+                            scene.remove(meshToBeRemoved);
+                            
+                            deleteList[j] = null;
+                            
                         }
+                        
+                        //////////////////////////////////////////////////////////////////////////////////////
                     
-                        if(i++ > 400){
-                            yt_get(queue.shift());
+                    
+                        if(i++ > (300) && speedZ != 0){
+                            yt_get(queue.shift()); //checked
                             
                             i = 0;
                         }
+                    
                     
                         break;
                         
                     case 2: // waiting for input
                     
                         break;
-                    case 5:
+                    case 3:
+                        speedZ = 0;
+                        dropCount = 0;
+                        state = 4;
+                        break;
                         
+                    case 4:
                         //foreach in que, translate
         	            scene.traverse( function( node ) {
 
-                            if ( node instanceof THREE.Mesh ) {
+                            if ( node instanceof THREE.Mesh  ) {
                                 
-                                node.position.z += .01; 
+                                if(node.newest){
+                                    
+                                    //node.position.y -= .20;
+                                    //node.materials[0].opacity = node.materials[0].opacity - 0;
+                              
+                                    //console.log(node.position.z );
+                                    
+                                    var theta = Math.atan(node.position.y / node.position.x);
+                                    
+                                    
+                                    if(node.position.x > 0 )
+                                        node.position.x += Math.cos(theta)/ 10;
+                                    else
+                                        node.position.x += Math.cos(theta+3.14)/ 10;
+                                    
+                                    if(node.position.y > 0)
+                                        node.position.y += Math.sin(theta)/ 10;
+                                    else
+                                        node.position.y += Math.sin(theta+3.14)/10;
+                                        
+                                        
+                                    if(node.material.opacity > .015){
+                                        node.material.opacity = node.material.opacity - .015;
+                                    }
+                                    
+                                }
+                                
                             }
                         
                         } );
                     
+                        if(dropCount++ > 800){
+                            state = 5;
+                        }
+                    
+                        
+                    
                         break;
+                    case 5: // prepare a new set of videos, reset que reset
+                        
+                        queue = [];
+                        queue.push(curr_key);
+                        
+                        var geometry = new THREE.PlaneGeometry( 1, 1, 1 );
+            
+                        var material = new THREE.MeshLambertMaterial({
+                            map: THREE.ImageUtils.loadTexture('https://i.ytimg.com/vi/' +  curr_key + '/default.jpg'),
+                            opacity: 1.0, transparent: true, depthWrite: false, renderOrder: 1, depthWrite: false, renderDepth: 0
+                          });
+            
+                        var plane = new THREE.Mesh( geometry, material );
+                        
+                        plane.newest = true;
+                        plane.name = curr_key;
+                        
+                            
+                        plane.renderOrder = 1;
+                        plane.opacity = 1.0; 
+                        plane.transparent = true;
+                        plane.depthWrite = false;
+                        plane.renderDepth=0;
+                        
+                        
+                        scene.add( plane );
+                        
+                        yt_get(curr_key);
+                        
+                        state = 1;
+                    
+                        //speedZ = .01*scrollValue;
                 }
                 
                 if(!pause){
@@ -226,8 +367,24 @@
             }
             render();
 
+
+            function load_slider(){
+                
+                    $( "#slider" ).slider({
+                        max: 5,
+                        min: 0,
+                        value: 1,
+                        step: .01,
+                        slide: function( event, ui ) {
+                            speedZ = .01*ui.value;
+                            scrollValue = ui.value;
+                        }
+                    });
+                
+            }
+
             function yt_get(yt_key){
-                console.log(yt_key);
+                //console.log(yt_key);
                 
                 $.ajax({
                     url: "yt.php?videoKey="+yt_key,
@@ -246,7 +403,9 @@
                              
                             var geometry = new THREE.PlaneGeometry( 1, 1, 1 );
                             var material = new THREE.MeshLambertMaterial({
-                                map: THREE.ImageUtils.loadTexture('https://i.ytimg.com/vi/' + key +  '/hqdefault.jpg')
+                                map: THREE.ImageUtils.loadTexture('https://i.ytimg.com/vi/' + key +  '/default.jpg'),
+                                opacity: 1.0, transparent: true, depthWrite: false, renderOrder: 1, depthWrite: false, renderDepth: 0
+                                
                             });
                             
                             var plane = new THREE.Mesh( geometry, material );
@@ -256,14 +415,25 @@
                             
                             plane.parnt = yt_key;
                 
-                            plane.position.x = ((Math.random() *2 )-1)*8;
+                            plane.position.x = ((Math.random() *2 )-1)*6;
                             plane.position.y = ((Math.random() *2 )-1)*2;
-                            plane.position.z = 0; //-5;
+                            plane.position.z = (-5 + Math.floor((Math.random() * 2) + 1)) - .01*scrollValue;
+                    
+                                    
+                            plane.renderOrder = 1;
+                            plane.opacity = 1.0; 
+                            plane.transparent = true;
+                            plane.depthWrite = false;
+                            plane.renderDepth=0;
                     
                             scene.add( plane );
                             
                             j++;
-                            queue.push(key);
+                            
+                            
+                            if(queue.indexOf(key) == -1){
+                                queue.push(key);
+                            }
                         }
                         
                         state = 1;
@@ -294,6 +464,8 @@
                 $('#buttonHide').click(function() {
                     pause = false;
                     
+                    state = 1;
+                    
                     $('#box1').animate({
                         left: '200%'
                     }, 1000, function() {
@@ -301,10 +473,17 @@
                         //$(this).appendTo('#container');
                     });
                     
+                    speedZ = .01*scrollValue;
+                    
                     requestAnimationFrame( render );
+                    
+                    
                 });
                 
                 $('#submit').click(function(){
+                
+                    $("#intro").hide(1000);
+                
                     var url = $('#searchTextbox').val();
                     var videoKey = '';
                      
@@ -322,15 +501,50 @@
                     if(videoKey != ''){
                         $('#intro').hide();
                     }
+                    
+                    ///////////////////////////////////////////////////////////
+                    
+                    var a = { x:1,
+                              y:1 }
+                    var b = { x:50,
+                              y:50 }
+                    
+                    var geometry = new THREE.Geometry();
+                    
+                    geometry.vertices.push( new THREE.Vector3( a.x, a.y, 2 ) );
+                    geometry.vertices.push( new THREE.Vector3( b.x, a.y, 2 ) );
+                    geometry.vertices.push( new THREE.Vector3( b.x, b.y, 2 ) );
+                    geometry.vertices.push( new THREE.Vector3( a.x, b.y, 2 ) );
+                    
+                    geometry.faces.push( new THREE.Face3( 0, 1, 2 ) ); // counter-clockwise winding order
+                    geometry.faces.push( new THREE.Face3( 0, 2, 3 ) );
+                    
+                    geometry.computeFaceNormals();
+                    geometry.computeVertexNormals();
+                    
+                    var material = new THREE.MeshBasicMaterial({ color: "0xff1100"});
+                    var mesh = new THREE.Mesh( geometry, material );
+                    scene.add(mesh);
+                    
+                    ///////////////////////////////////////////////////////////
                      
                     var geometry = new THREE.PlaneGeometry( 1, 1, 1 );
             
                     var material = new THREE.MeshLambertMaterial({
-                        map: THREE.ImageUtils.loadTexture('https://i.ytimg.com/vi/" +  videoKey + "/default.jpg')
+                        map: THREE.ImageUtils.loadTexture('https://i.ytimg.com/vi/' +  videoKey + '/default.jpg'),
+                        opacity: 1.0, transparent: true, depthWrite: false, renderOrder: 1, depthWrite: false, renderDepth: 0
                       });
         
                     var plane = new THREE.Mesh( geometry, material );
+                    
+                    plane.newest = true;
                     plane.name = videoKey;
+                    plane.renderOrder = 1;
+                    plane.opacity = 1.0; 
+                    plane.transparent = true;
+                    plane.depthWrite = false;
+                    plane.renderDepth=0;
+                    
                     scene.add( plane );
                     
                     yt_get(videoKey);
@@ -342,7 +556,7 @@
 		
         $(document).click(function (e) { 
             
-            if(state == 2){
+            if(state == 2 || state == -1 || state == 4 || state == 3){ 
                 return;
             } 
             
@@ -354,8 +568,23 @@
                         
             var intersects = raycaster.intersectObjects( scene.children );
         
-            if(intersects[0].object.name != null){        
-                pause = true;
+            var j = 0;
+        
+            for(;;){
+                if(intersects[j].object.material.opacity < .05){
+                    j++;
+                }else{
+                    break;
+                }
+            }
+        
+            if(intersects[j].object.name != null){
+                
+                
+                curr_key = intersects[j].object.name;
+                state = 3;
+                
+                
                 //reset youtube embed, before scrolling it onto screen
                         
                 $( "#ytplayer" ).remove();
@@ -364,7 +593,7 @@
                 $('<iframe />', {
                     id: 'ytplayer',
                     type: 'text/html',
-                    src: "https://www.youtube.com/embed/" + intersects[ 0 ].object.name + "?autoplay=0&origin=https://ytphp-colonel.c9.io/",
+                    src: "https://www.youtube.com/embed/" + intersects[ j ].object.name + "?autoplay=0&origin=https://ytphp-colonel.c9.io/",
                     autoplay: "0",
                     frameborder: "0",
                     height:"80%",
@@ -373,12 +602,17 @@
                     
                 $('#box1').animate({
                     right: '100%'
-                }, 1000, function() {
+                }, 3000, function() {
                     $(this).css('left', '100%');
+                    speedZ = 0;
                 });
             }
+            
+            
         });
+        
         </script>
+        
         <div id="box1" class="box">
             <div id="buttonHide">
                 Hide
@@ -387,7 +621,10 @@
         </div>
         <div id="intro">
             Enter YouTube URL: <br>
-            <input type="text" class="searchTextbox" name="fname" id="searchTextbox"><input type="button" id="submit" Value="Deep View YouTube">
+            <input type="text" class="searchTextbox" name="fname" id="searchTextbox"><br><input type="button" id="submit" Value="Deep View YouTube">
+        </div>
+        <div id="fromBottom">
+            <div id="slider"></div>
         </div>
 	</body>
 </html>
