@@ -1,11 +1,9 @@
 
 <?php
-    # json string from youtube containing related items of a given youtube video
-    # parameterize key and nextPage
-    # you must white list this ip at the google apis console: curl -s checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'
+        # json string from youtube containing related items of a given youtube video
+        # parameterize key and nextPage
+        # you must white list this ip at the google apis console: curl -s checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'
     
-
-        $ret = array();
         $videoKey = $_GET["videoKey"];
         $videoKey = substr($videoKey,0,11);
         
@@ -17,15 +15,18 @@
             trigger_error("Video Key Needed", E_USER_ERROR);
         }
         
+        // http get rest
         $dataHandle = file("https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId=$videoKey&type=video&key=#Insert YouTube API key here#&maxResults=25");
         
         foreach($dataHandle as $line) {
             $data = $data . "$line";
         }
     
+        // turn json string into php objecy
         $obj = json_decode($data);
         $lengthOfResults = $obj->{"pageInfo"}->{"resultsPerPage"};
         
+        // build json response with strings
         for($i = 0; $i < $lengthOfResults; $i++) {
             $key = $obj->{"items"}[$i]->{"id"}->{"videoId"}; #->{1}->{"id"}->{"videoId"} . "\n";
             
@@ -36,10 +37,10 @@
         
         $response = rtrim ( $response, "," );
 
-        // echo "{ \"related\" => ";
-        // echo "[".$response."]}";
+        // send to client via ajax
         echo '{'.$response.'}';
         
+        // get title
         function get_title($key){
             $dataHandle = file("https://www.googleapis.com/youtube/v3/videos?id=$key&key=AIzaSyDjs8UVVf9xvl5hPDBcolcZn9IcLbgOHbw&max&fields=items(snippet(title))&part=snippet");
 
